@@ -1,3 +1,5 @@
+import os
+import aiohttp
 from asyncio import gather
 
 from nonebot import on_type
@@ -40,6 +42,7 @@ essence_cmd = on_alconna(
         Subcommand("cancel"),
         Subcommand("fetchall"),
         Subcommand("export"),
+        Subcommand("sevaall"),
         Subcommand("clean"),
     ),
     rule=trigger_rule,
@@ -91,6 +94,7 @@ async def help_cmd():
         + "essence cancel - 在数据库中删除最近取消的一条精华消息\n"
         + "essence fetchall - 获取群内所有精华消息\n"
         + "essence export - 导出精华消息\n"
+        + "essence sevaall - 导出精华消息\n"
         + "essence clean - 删除群里使用精华消息(数据库中保留)"
     )
 
@@ -152,7 +156,6 @@ async def cancel_cmd(event: GroupMessageEvent, bot: Bot):
             f"已删除 {await get_name(bot, event.group_id, del_data[2])} 的一条精华消息"
         )
 
-
 @essence_cmd.dispatch(
     "fetchall",
     permission=GROUP_ADMIN | GROUP_OWNER,
@@ -179,6 +182,41 @@ async def fetchall_cmd(event: GroupMessageEvent, bot: Bot):
             await db.insert_data(data)
     await essence_cmd.finish(f"成功保存 {savecount}/{len(essencelist)} 条精华消息")
     
+
+
+
+@essence_cmd.dispatch(
+    "sevaall",
+    permission=GROUP_ADMIN | GROUP_OWNER,
+).handle()
+async def sevaall_cmd(event: GroupMessageEvent, bot: Bot):
+    essencelist = await bot.get_essence_msg_list(group_id=event.group_id)
+    image_directory = "./data/essence/image"
+    os.makedirs(image_directory, exist_ok=True)
+    
+    savecount = 0
+    for essence in essencelist:
+        sender_time = essence['sender_time']
+        sender_nick = essence['sender_nick']
+        for content in essence['content']:
+            if content['type'] == 'image':
+                image_url = content['data']['url']
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(image_url) as resp:
+                        if resp.status == 200:
+                            image_data = await resp.read()
+                            image_filename = f"{sender_time}_{sender_nick}.jpeg"
+                            image_path_count = 1
+                            image_save_path = os.path.join(image_directory, image_filename)
+                            while os.path.exists(image_save_path):
+                                image_filename = f"{sender_time}_{sender_nick}({image_path_count}).jpeg"
+                                image_save_path = os.path.join(image_directory, image_filename)
+                                image_path_count += 1
+                            with open(image_save_path, 'wb') as image_file:
+                                image_file.write(image_data)
+                                savecount += 1
+    
+    await essence_cmd.finish(f"总共找到 {len(essencelist)} 条精华消息，成功保存 {savecount} 张图片到 {image_directory}")
 
 @essence_cmd.dispatch(
     "export",

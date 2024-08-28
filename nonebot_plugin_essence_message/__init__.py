@@ -42,7 +42,7 @@ essence_cmd = on_alconna(
         Subcommand("cancel"),
         Subcommand("fetchall"),
         Subcommand("export"),
-        Subcommand("sevaall"),
+        Subcommand("saveall"),
         Subcommand("clean"),
     ),
     rule=trigger_rule,
@@ -94,7 +94,7 @@ async def help_cmd():
         + "essence cancel - 在数据库中删除最近取消的一条精华消息\n"
         + "essence fetchall - 获取群内所有精华消息\n"
         + "essence export - 导出精华消息\n"
-        + "essence sevaall - 导出精华消息\n"
+        + "essence saveall - 保存精华消息内所有图片到本地文件夹\n"
         + "essence clean - 删除群里使用精华消息(数据库中保留)"
     )
 
@@ -189,7 +189,7 @@ async def fetchall_cmd(event: GroupMessageEvent, bot: Bot):
     "sevaall",
     permission=GROUP_ADMIN | GROUP_OWNER,
 ).handle()
-async def sevaall_cmd(event: GroupMessageEvent, bot: Bot):
+async def saveall_cmd(event: GroupMessageEvent, bot: Bot):
     essencelist = await bot.get_essence_msg_list(group_id=event.group_id)
     image_directory = "./data/essence/image"
     os.makedirs(image_directory, exist_ok=True)
